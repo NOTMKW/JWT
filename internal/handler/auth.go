@@ -1,12 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
-	"net/http"
 	"strings"
 
 	"github.com/NOTMKW/JWT/internal/dto"
 	"github.com/NOTMKW/JWT/internal/service"
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -23,84 +22,80 @@ func NewAuthHandler(authService *service.Authservice) *AuthHandler {
 	}
 }
 
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req dto.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid Request Body")
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error: "Invalid Response Body",
+		})
 	}
 
 	if err := h.validator.Struct(&req); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed:"+err.Error())
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error: "Validation Failed: " + err.Error(),
+		})
 	}
-
 	response, err := h.authService.Register(&req)
 	if err != nil {
-		h.writeErrorResponse(w, http.StatusConflict, err.Error())
-		return
+		return c.Status(fiber.StatusConflict).JSON(dto.ErrorResponse{
+			Error: err.Error(),
+		})
 	}
-
-	h.writeJSONResponse(w, http.StatusCreated, response)
+	return c.Status(fiber.StatusCreated).JSON(response)
 }
 
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req dto.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid Request Body")
-		return
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error: "Invalid request body",
+		})
 	}
 
 	if err := h.validator.Struct(&req); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Validation Failed:"+err.Error())
-		return
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error: "Validation failed: " + err.Error(),
+		})
 	}
 
-	response, err := h.authService.Login(&req)
+	authResponse, err := h.authService.Login(&req)
 	if err != nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, err.Error())
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+			Error: err.Error(),
+		})
 	}
 
-	h.writeJSONResponse(w, http.StatusOK, response)
+	return c.Status(fiber.StatusOK).JSON(authResponse)
+
 }
 
-func (h *AuthHandler) Protected(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
+func (h *AuthHandler) Protected(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Authorization header required")
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+			Error: "Authorization header required",
+		})
 	}
 
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 	if tokenString == authHeader {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "bearer token required")
-		return
-	}
-	claims, err := h.authService.ValidateToken(tokenString)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "invalid token")
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+			Error: "Bearer token required",
+		})
 	}
 
-	response := map[string]interface{}{
-		"message": "Access Granted",
-		"user": map[string]string{
+	claims, err := h.authService.ValidateToken(tokenString)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+			Error: "Invalid token",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Access granted",
+		"user": fiber.Map{
 			"id":    claims.UserID,
 			"email": claims.Email,
 		},
-	}
-
-	h.writeJSONResponse(w, http.StatusOK, response)
-
-}
-
-func (h *AuthHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
-}
-
-func (h *AuthHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
-	h.writeJSONResponse(w, statusCode, dto.ErrorResponse{Error: message})
+	})
 }
