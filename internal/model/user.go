@@ -7,12 +7,30 @@ import (
 )
 
 type User struct {
-	ID        string      `json:"id"`
+	ID        string    `json:"id"`
 	Username  string    `json:"username"`
 	Email     string    `json:"email"`
 	Password  string    `json:"-"`
+	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+const (
+	RoleAdmin = "admin"
+	RoleUser  = "user"
+)
+
+func (u *User) IsAdmin() bool {
+	return u.Role == RoleAdmin
+}
+
+func (u *User) IsUser() bool {
+	return u.Role == RoleUser
+}
+
+func (u *User) HasRole(role string) bool {
+	return u.Role == role
 }
 
 func (u *User) HashPassword() error {

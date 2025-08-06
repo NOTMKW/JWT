@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/NOTMKW/JWT/internal/dto"
+	"github.com/NOTMKW/JWT/internal/model"
 	"github.com/NOTMKW/JWT/internal/service"
 	"github.com/gofiber/fiber/v2"
 
@@ -91,11 +92,24 @@ func (h *AuthHandler) Protected(c *fiber.Ctx) error {
 		})
 	}
 
+	if claims.Role == model.RoleAdmin {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Admin access granted",
+			"user": fiber.Map{
+				"id": claims.UserID,
+				"email": claims.Email,
+				"role": claims.Role,
+			},
+			"data": "access to all users & admin functions",
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Access granted",
+		"message": "User access granted",
 		"user": fiber.Map{
 			"id":    claims.UserID,
 			"email": claims.Email,
+			"role": claims.Role,
 		},
 	})
 }

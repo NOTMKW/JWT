@@ -19,6 +19,7 @@ type Authservice struct {
 type Claims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -30,10 +31,20 @@ func NewAuthService(userRepo *repo.UserRepository, jwtSecret string) *Authservic
 }
 
 func (s *Authservice) Register(req *dto.RegisterRequest) (*dto.AuthResponse, error) {
+	role := req.Role
+	if role == "" {
+		role = model.RoleUser
+	}
+
+	if role != model.RoleAdmin && role != model.RoleUser {
+		return nil, errors.New("invalid role")
+	}
+
 	user := &model.User{
 		Username: req.Username,
 		Email:    req.Email,
 		Password: req.Password,
+		Role:     role,
 	}
 
 	if err := user.HashPassword(); err != nil {
@@ -103,6 +114,7 @@ func (s *Authservice) generateToken(user *model.User) (string, error) {
 	claims := &Claims{
 		UserID: user.ID,
 		Email:  user.Email,
+		Role: 	user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(24 * time.Hour)},
 			IssuedAt:  &jwt.NumericDate{time.Now()},
