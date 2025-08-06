@@ -6,9 +6,9 @@ import (
 	"github.com/NOTMKW/JWT/internal/dto"
 	"github.com/NOTMKW/JWT/internal/model"
 	"github.com/NOTMKW/JWT/internal/service"
-	"github.com/gofiber/fiber/v2"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 type AuthHandler struct {
@@ -68,6 +68,25 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(authResponse)
 
+}
+
+func (h *AuthHandler) VerifyMFA(c *fiber.Ctx) error {
+	var req dto.VerifyMFARequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error: "Invalid Response Body",
+		})
+	}
+
+	authResponse, err := h.authService.VerifyMFACode(&req)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+			Error : err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(authResponse)
 }
 
 func (h *AuthHandler) Protected(c *fiber.Ctx) error {

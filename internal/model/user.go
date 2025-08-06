@@ -16,6 +16,13 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type MFACode struct {
+	Email     string    `json:"email"`
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 const (
 	RoleAdmin = "admin"
 	RoleUser  = "user"
@@ -31,6 +38,10 @@ func (u *User) IsUser() bool {
 
 func (u *User) HasRole(role string) bool {
 	return u.Role == role
+}
+
+func (m *MFACode) IsExpired() bool {
+	return time.Now().After(m.ExpiresAt)
 }
 
 func (u *User) HashPassword() error {

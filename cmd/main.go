@@ -37,9 +37,11 @@ func main() {
 
 	userRepo := repo.NewUserRepository()
 
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	EmailService := *service.NewEmailService(cfg)
 
-	authHandler := handler.NewAuthHandler(authService)
+	AuthService := service.NewAuthService(userRepo, &EmailService, cfg.JWTSecret)
+
+	authHandler := handler.NewAuthHandler(AuthService)
 
 	routes.SetupAuthRoutes(app, authHandler)
 

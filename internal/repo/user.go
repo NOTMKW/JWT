@@ -10,8 +10,9 @@ import (
 )
 
 type UserRepository struct {
-	users map[string]*model.User
-	mutex sync.RWMutex
+	users    map[string]*model.User
+	mfaCodes map[string]*model.MFACode
+	mutex    sync.RWMutex
 }
 
 func NewUserRepository() *UserRepository {
@@ -53,7 +54,7 @@ func (r *UserRepository) GetUserByEmail(email string) (*model.User, error) {
 	return nil, errors.New("user not found")
 }
 
-func (r *UserRepository) GetUserByID (id string) (*model.User, error) {
+func (r *UserRepository) GetUserByID(id string) (*model.User, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -62,4 +63,31 @@ func (r *UserRepository) GetUserByID (id string) (*model.User, error) {
 		return nil, errors.New("user not found")
 	}
 	return user, nil
+}
+
+func (r *UserRepository) StoreMFACode(mfaCode *model.MFACode) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	r.mfaCodes[mfaCode.Email] = mfaCode
+	return nil
+}
+
+func (r *UserRepository) GetMFACode(email string) (*model.MFACode, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	mfaCode, exists := r.mfaCodes[email]
+	if !exists {
+		return nil, errors.New("MFA code not found")
+	}
+	return mfaCode, nil
+}
+
+func (r *UserRepository) DeleteMFACode(email string) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	delete(r.mfaCodes, email)
+	return nil
 }

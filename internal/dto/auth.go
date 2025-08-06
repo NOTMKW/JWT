@@ -12,9 +12,16 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required,min=6,max=100"`
 }
 
+type VerifyMFARequest struct {
+	Email string `json:"email" validate:"required.email`
+	Code  string `json:"code"  validate:"required,len=6`
+}
+
 type AuthResponse struct {
-	Token string       `json:"token"`
-	User  UserResponse `json:"user"`
+	Token       string       `json:"token"`
+	User        UserResponse `json:"user"`
+	RequiredMFA bool         `json:"requires_mfa.omitempty"`
+	Message     string       `json:"message,omitempty"`
 }
 
 type UserResponse struct {
