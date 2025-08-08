@@ -12,11 +12,11 @@ import (
 )
 
 type AuthHandler struct {
-	authService *service.Authservice
+	authService *service.AuthService
 	validator   *validator.Validate
 }
 
-func NewAuthHandler(authService *service.Authservice) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 		validator:   validator.New(),
@@ -83,6 +83,30 @@ func (h *AuthHandler) VerifyMFA(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
 			Error : err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(authResponse)
+}
+
+func (h *AuthHandler) GoogleAuth(c *fiber.Ctx) error {
+	var req dto.GoogleAuthRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error: "Invalid request body",
+		})
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error: "validation failed: " + err.Error(),
+		})
+	}
+
+	authResponse, err := h.authService.GoogleAuth(req.Code)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+			Error: err.Error(),
 		})
 	}
 

@@ -17,6 +17,10 @@ type VerifyMFARequest struct {
 	Code  string `json:"code"  validate:"required,len=6`
 }
 
+type GoogleAuthRequest struct {
+	Code string `json:"code" validate "required"`
+}
+
 type AuthResponse struct {
 	Token       string       `json:"token"`
 	User        UserResponse `json:"user"`
